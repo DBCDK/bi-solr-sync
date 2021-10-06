@@ -1,0 +1,1 @@
+# bi-solr-sync
