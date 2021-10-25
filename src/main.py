@@ -113,8 +113,8 @@ if __name__ == "__main__":
 
         if output_filename is not None:
             logging.info("Writing result to file ...")
-            with open(output_filename, 'w') as output:
-                json.dump(docs, output)
+            with open(output_filename, 'w', encoding='utf-8') as output:
+                json.dump(docs, output, ensure_ascii=False)
         else:
             logging.info("Writing result to console ...")
             print(json.dumps(docs))
