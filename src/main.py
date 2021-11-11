@@ -9,6 +9,8 @@ import sys
 import argcomplete
 import requests
 
+#import sharepoint
+
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
 
@@ -80,7 +82,7 @@ def get_fields():
     return keys
 
 
-def get_solr_url(raw_url):
+def format_solr_url(raw_url):
     if '/select' not in raw_url:
         raise Exception(
             'Solr url has wrong format. Url must contain \'/select\', e.g. http://rawrepo.solr.dbc.dk:8983/solr/basis-collection/select\?q\=\*:\*')
@@ -93,12 +95,16 @@ def get_solr_url(raw_url):
 
 if __name__ == "__main__":
     try:
-        args = parse_args()
-        url = args.url
-        output_filename = args.output
-        since = args.since
+        solr_url = os.environ.get('SOLR_URL')
+        since = os.environ.get('SINCE')
+        file_name = os.environ.get('FILE_NAME')
+        sharepoint_url = os.environ.get('SHAREPOINT_URL')
+        sharepoint_token = os.environ.get('SHAREPOINT_TOKEN')
 
-        solr_url = get_solr_url(url)
+        if solr_url is None:
+            raise Exception('Required SOLR_URL is missing')
+
+        solr_url = format_solr_url(solr_url)
         query = generate_query(since)
         fields = get_fields()
 
@@ -111,14 +117,13 @@ if __name__ == "__main__":
         docs = get_docs(solr_url, query, extra_fields=fields)
         logging.info("Solr extraction done")
 
-        if output_filename is not None:
-            logging.info("Writing result to file ...")
-            with open(output_filename, 'w', encoding='utf-8') as output:
-                json.dump(docs, output, ensure_ascii=False)
-        else:
-            logging.info("Writing result to console ...")
-            print(json.dumps(docs))
+        logging.info("Writing result to file ...")
+        with open(file_name, 'w', encoding='utf-8') as output:
+            json.dump(docs, output, ensure_ascii=False)
         logging.info("Job done!")
+
+        #sharepoint.upload_file(sharepoint_url, sharepoint_token, docs)
+
     except Exception as e:
         print("Unexpected exception: {}"
               .format(e), file=sys.stderr)
