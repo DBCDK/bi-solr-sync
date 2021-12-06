@@ -1,5 +1,6 @@
 import json
 from datetime import *
+import os
 
 import requests
 
@@ -48,6 +49,11 @@ class SharepointConnector:
             "Authorization": "Bearer " + self.token,
             'Content-type': 'multipart/form-data'
         }
+
+        file_size = os.path.getsize(file_name)
+        if file_size > 4 * 1024 * 1024:
+            raise Exception('The file %s is too big at be uploaded as delta', file_name)
+
 
         with open(file_name, 'rb') as json_file:
             json_content = json.load(json_file)
