@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument('--since',
                         help='If set the query will only find documents since the given date. Must be formatted in a way Solr understands, e.g. \'2021-10-11T07:00:00Z\'.',
                         )
-    parser.add_argument('--upload', help="Hvis sat bliver der uploadet til sharepoint", action='store_true')
+    parser.add_argument('--upload', help="If set the file is upload to sharepoint", action='store_true')
     argcomplete.autocomplete(parser)
     return parser.parse_args()
 
