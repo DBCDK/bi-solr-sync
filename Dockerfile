@@ -9,4 +9,4 @@ RUN apt-get autoremove -y
 COPY src src
 COPY setup.py setup.py
 RUN pip install -e .
-CMD ["main"]
+CMD ["src/main.py"]

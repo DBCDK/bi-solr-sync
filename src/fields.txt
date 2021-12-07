@@ -1,7 +1,0 @@
-term.ka
-term.kk
-term.km
-term.ma
-term.ww
-term.n01
-term.d08a

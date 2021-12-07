@@ -73,14 +73,9 @@ def get_docs(base_url, query, extra_fields=None):
 
 
 def get_fields():
-    with open('fields.txt', 'r') as key_file:
-        data = key_file.read()
+    fields = os.environ.get('FIELDS')
 
-    keys = data.split('\n')
-    # Remove empty string
-    keys = [x for x in keys if x]
-
-    return keys
+    return fields.split(';')
 
 
 def format_solr_url(raw_url):

@@ -24,6 +24,8 @@ optional arguments:
   --since SINCE    If set the query will only find documents since the given date. Must be formatted in a way Solr understands, e.g. '2021-10-11T07:00:00Z'.
   --upload         If set the file is uploaded to sharepoint
 ```
+In addition, the environment variable `FIELDS` must be set with a comma separated list of solr fields to include.
+
 Note that if --upload is set the following environment variables must be set as well:
 ```
 SHAREPOINT_TENANT
@@ -34,10 +36,13 @@ SHAREPOINT_DRIVE_ID
 
 Example without upload:
 ```
+export FIELDS="term.ka;term.kk;term.km;term.ma;term.ww;term.n01;term.d08a"
+
 ./main.py --since 2021-10-01T07:00:00Z --output data.json http://solr.dbc.dk:8983/solr/collection/select\?q\=\*:\*
 ```
 Example with upload:
 ```
+export FIELDS="term.ka;term.kk;term.km;term.ma;term.ww;term.n01;term.d08a"
 export SHAREPOINT_TENANT=...
 export SHAREPOINT_CLIENT_ID=...
 export SHAREPOINT_CLIENT_SECRET=...
