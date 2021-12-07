@@ -22,7 +22,7 @@ optional arguments:
   -h, --help       show this help message and exit
   --output OUTPUT  Name of output file (should end with .json). If not supplied output will be done to the console instead.
   --since SINCE    If set the query will only find documents since the given date. Must be formatted in a way Solr understands, e.g. '2021-10-11T07:00:00Z'.
-  --upload         If set the file is upload to sharepoint
+  --upload         If set the file is uploaded to sharepoint
 ```
 Note that if --upload is set the following environment variables must be set as well:
 ```
