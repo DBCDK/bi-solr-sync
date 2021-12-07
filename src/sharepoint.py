@@ -1,6 +1,6 @@
 import json
-from datetime import *
 import os
+from datetime import *
 
 import requests
 
@@ -13,6 +13,25 @@ class SharepointConnector:
         self.client_secret = client_secret
         self.token = None
         self.token_expires = None
+        self.proxy = None
+        if os.environ.get('PROXY_HOSTNAME') is not None:
+            proxy_hostname = os.environ.get('PROXY_HOSTNAME')
+            proxy_port = os.environ.get('PROXY_PORT')
+            proxy_username = os.environ.get('PROXY_USERNAME')
+            proxy_password = os.environ.get('PROXY_PASSWORD')
+
+            if proxy_port is None:
+                proxy_port = '1080'
+            if proxy_username is None or proxy_password is None:
+                raise Exception('PROXY_HOSTNAME is set so using socks proxy, but username or password is missing')
+
+            proxy_url = 'socks5://{}:{}@{}:{}'.format(proxy_username,
+                                                      proxy_password,
+                                                      proxy_hostname,
+                                                      proxy_port)
+
+            self.proxy = {'http': proxy_url,
+                          'https': proxy_url}
 
     def __check_token(self):
         url = 'https://login.microsoftonline.com/%(tenant_id)s.onmicrosoft.com/oauth2/v2.0/token' % {
@@ -54,11 +73,10 @@ class SharepointConnector:
         if file_size > 4 * 1024 * 1024:
             raise Exception('The file %s is too big at be uploaded as delta', file_name)
 
-
         with open(file_name, 'rb') as json_file:
             json_content = json.load(json_file)
 
-        response = requests.put(url, data=json.dumps(json_content), headers=headers)
+        response = requests.put(url, data=json.dumps(json_content), headers=headers, proxies=self.proxy)
 
         if response.status_code != 201:
             raise Exception('Got unexpected status code: %s with message %s' % (response.status_code, response.text))
