@@ -41,7 +41,7 @@ def get_count(base_url, query):
     params = {
         "q": query,
         "rows": 0,
-        "wt": json
+        "wt": 'json'
     }
 
     response = requests.get(base_url, params=params)
