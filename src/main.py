@@ -101,6 +101,7 @@ if __name__ == "__main__":
         sharepoint_client_id = os.environ.get('SHAREPOINT_CLIENT_ID')
         sharepoint_client_secret = os.environ.get('SHAREPOINT_CLIENT_SECRET')
         sharepoint_drive_id = os.environ.get('SHAREPOINT_DRIVE_ID')
+        sharepoint_folder = os.environ.get('SHAREPOINT_FOLDER')
 
         if do_upload and (
                 sharepoint_tenant is None or sharepoint_client_id is None or sharepoint_client_secret is None or sharepoint_drive_id is None):
@@ -130,7 +131,7 @@ if __name__ == "__main__":
         if do_upload:
             logging.info("Uploading to sharepoint...")
             sharepoint = SharepointConnector(sharepoint_tenant, sharepoint_client_id, sharepoint_client_secret)
-            sharepoint.upload_delta(sharepoint_drive_id, file_name)
+            sharepoint.upload_delta(sharepoint_drive_id, file_name, folder_name=sharepoint_folder)
             logging.info("Upload done")
 
         logging.info("All done!")

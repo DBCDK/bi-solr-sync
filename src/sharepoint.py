@@ -3,7 +3,7 @@ import os
 from datetime import *
 
 import requests
-
+import logging
 
 class SharepointConnector:
 
@@ -32,12 +32,15 @@ class SharepointConnector:
 
             self.proxy = {'http': proxy_url,
                           'https': proxy_url}
+        logging.info("Sharepoint connector initialized. Using proxy: %s" % (self.proxy is None))
 
     def __check_token(self):
         url = 'https://login.microsoftonline.com/%(tenant_id)s.onmicrosoft.com/oauth2/v2.0/token' % {
             'tenant_id': self.tenant_id
         }
+        # TODO also check if token is expired
         if self.token is None:
+            logging.info('Getting new token')
             data = {
                 'grant_type': 'client_credentials',
                 'scope': 'https://graph.microsoft.com/.default',
@@ -56,13 +59,23 @@ class SharepointConnector:
             self.token = received_token['access_token']
             self.token_expires = datetime.now() + timedelta(minutes=received_token['expires_in'])
 
-    def upload_delta(self, drive_id, file_name):
+    def upload_delta(self, drive_id, file_name, folder_name=None):
         self.__check_token()
-        url = 'https://graph.microsoft.com/v1.0/drives/%(drive_id)s/items/root:/%(file_name)s:/content' % \
-              {
-                  'drive_id': drive_id,
-                  'file_name': file_name
-              }
+        if folder_name is None:
+            url = 'https://graph.microsoft.com/v1.0/drives/%(drive_id)s/items/root:/%(file_name)s:/content' % \
+                  {
+                      'drive_id': drive_id,
+                      'file_name': file_name
+                  }
+            logging.info('Uploading %s to sharepoint' % file_name)
+        else:
+            url = 'https://graph.microsoft.com/v1.0/drives/%(drive_id)s/items/root:/%(folder_name)s/%(file_name)s:/content' % \
+                  {
+                      'drive_id': drive_id,
+                      'folder_name': folder_name,
+                      'file_name': file_name
+                  }
+            logging.info('Uploading %s in folder %s to sharepoint' % (file_name, folder_name))
 
         headers = {
             "Authorization": "Bearer " + self.token,
