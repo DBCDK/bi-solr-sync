@@ -45,7 +45,7 @@ class SharepointConnector:
                 'client_secret': self.client_secret
             }
             headers = {'content-type': 'application/x-www-form-urlencoded'}
-            response = requests.post(url, data=data, headers=headers)
+            response = requests.post(url, data=data, headers=headers, proxies=self.proxy)
 
             if response.status_code != 200:
                 raise Exception(
