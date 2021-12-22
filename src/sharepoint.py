@@ -1,9 +1,9 @@
-import json
+import logging
 import os
 from datetime import *
 
 import requests
-import logging
+
 
 class SharepointConnector:
 
@@ -32,7 +32,11 @@ class SharepointConnector:
 
             self.proxy = {'http': proxy_url,
                           'https': proxy_url}
-        logging.info("Sharepoint connector initialized. Using proxy: %s" % (self.proxy is None))
+        logging.info('Sharepoint connector initialized. Using proxy: %s' % (self.proxy is not None))
+
+    def upload(self, drive_id, file_name, folder_name=None):
+        upload_url = self.__start_upload(drive_id, file_name, folder_name=folder_name)
+        self.__upload_segments(upload_url, file_name)
 
     def __check_token(self):
         url = 'https://login.microsoftonline.com/%(tenant_id)s.onmicrosoft.com/oauth2/v2.0/token' % {
@@ -59,17 +63,18 @@ class SharepointConnector:
             self.token = received_token['access_token']
             self.token_expires = datetime.now() + timedelta(minutes=received_token['expires_in'])
 
-    def upload_delta(self, drive_id, file_name, folder_name=None):
+    def __start_upload(self, drive_id, file_name, folder_name=None):
         self.__check_token()
+
         if folder_name is None:
-            url = 'https://graph.microsoft.com/v1.0/drives/%(drive_id)s/items/root:/%(file_name)s:/content' % \
+            url = 'https://graph.microsoft.com/v1.0/drives/%(drive_id)s/items/root:/%(file_name)s:/createUploadSession' % \
                   {
                       'drive_id': drive_id,
                       'file_name': file_name
                   }
             logging.info('Uploading %s to sharepoint' % file_name)
         else:
-            url = 'https://graph.microsoft.com/v1.0/drives/%(drive_id)s/items/root:/%(folder_name)s/%(file_name)s:/content' % \
+            url = 'https://graph.microsoft.com/v1.0/drives/%(drive_id)s/items/root:/%(folder_name)s/%(file_name)s:/createUploadSession' % \
                   {
                       'drive_id': drive_id,
                       'folder_name': folder_name,
@@ -78,64 +83,70 @@ class SharepointConnector:
             logging.info('Uploading %s in folder %s to sharepoint' % (file_name, folder_name))
 
         headers = {
-            "Authorization": "Bearer " + self.token,
-            'Content-type': 'multipart/form-data'
+            'Authorization': 'Bearer ' + self.token
         }
 
-        file_size = os.path.getsize(file_name)
-        if file_size > 4 * 1024 * 1024:
-            raise Exception('The file %s is too big at be uploaded as delta', file_name)
-
-        with open(file_name, 'rb') as json_file:
-            json_content = json.load(json_file)
-
-        response = requests.put(url, data=json.dumps(json_content), headers=headers, proxies=self.proxy)
-
-        if response.status_code != 201:
-            raise Exception('Got unexpected status code: %s with message %s' % (response.status_code, response.text))
-
-    # This function doesn't actually work (yet)
-    def start_upload(self, drive_id, file_name, json_content):
-        self.__check_token()
-        url = 'https://graph.microsoft.com/v1.0/drives/%(drive_id)s/items/root/createUploadSession' % \
-              {'drive_id': drive_id}
-        print(url)
-        headers = {
-            "Authorization": "Bearer " + self.token,
-            "Content-type": "text/plain"
-        }
-
-        data = {
-            "item": {
-                "@odata.type": "microsoft.graph.driveItemUploadableProperties",
-                "@microsoft.graph.conflictBehavior": "replace",
-                "name": file_name
-            }
-        }
-
-        response = requests.post(url, headers=headers, data=data)
+        response = requests.post(url, headers=headers)
 
         if response.status_code != 200:
             raise Exception(
                 'Got status code %s from %s with message %s' % (response.status_code, url, response.text))
 
         j = response.json()
-        print(j)
-        upload_url = j['uploadUrl']
-        print('upload_url', upload_url)
-        self.upload(upload_url, json_content)
+        logging.info("Using upload url %s" % j['uploadUrl'])
 
-    # This function doesn't actually work (yet)
-    def upload(self, upload_url, json_content):
-        data = json.dumps(json_content)
-        data_length = len(data)
+        return j['uploadUrl']
+
+    def __upload_segments(self, upload_url, file_name):
+        self.__check_token()
+
+        # From https://docs.microsoft.com/en-us/graph/api/driveitem-createuploadsession?view=graph-rest-1.0
+        # To upload the file, or a portion of the file, your app makes a PUT request to the uploadUrl value received in
+        # the createUploadSession response. You can upload the entire file, or split the file into multiple byte ranges,
+        # as long as the maximum bytes in any given request is less than 60 MiB.
+        #
+        # The fragments of the file must be uploaded sequentially in order. Uploading fragments out of order will result
+        # in an error.
+        #
+        # Note: If your app splits a file into multiple byte ranges, the size of each byte range MUST be a multiple of
+        # 320 KiB (327,680 bytes). Using a fragment size that does not divide evenly by 320 KiB will result in errors
+        # committing some files.
+        segment_size = 327680 * 100
+
+        file_size = os.path.getsize(file_name)
+        logging.info('File size: %s' % file_size)
+        with open(file_name, 'rb') as file:
+            data = file.read()
+
+        position = 0
+
+        while position < file_size:
+            start_byte = position
+            end_byte = position + segment_size
+            try:
+                self.__upload_segment(upload_url, data[start_byte:end_byte], start_byte, file_size)
+                position += segment_size
+            except Exception as err:
+                logging.error('Got exception: %s' % err)
+                logging.info('It is most likely Connection reset by peer, so lets just try once more')
+                self.__upload_segment(upload_url, data[start_byte:end_byte], start_byte, file_size)
+
+    def __upload_segment(self, upload_url, data_segment, offset, total_size):
+        self.__check_token()
+
+        segment_size = len(data_segment)
         headers = {
-            'Content-Length': data_length,
-            'Content-Range': '0-%s/%s' % (data_length - 1, data_length)
+            'Authorization': 'Bearer ' + self.token,
+            'Content-Length': '%s' % segment_size,
+            'Content-Range': 'bytes %s-%s/%s' % (offset, offset + segment_size - 1, total_size)
         }
 
-        response = requests.put(upload_url, data=data, headers=headers)
-        print(response)
-        if response.status_code != 202:
+        logging.info('Content-Length: %s - Uploading bytes %s-%s/%s' % (
+            segment_size, offset, offset + segment_size - 1, total_size))
+
+        response = requests.put(upload_url, data=data_segment, headers=headers)
+
+        # While uploading the segments 202 is returned. But the status code of the last segment can be both 200 and 201
+        if response.status_code not in [200, 201, 202]:
             raise Exception(
                 'Got status code %s with message %s' % (response.status_code, response.text))

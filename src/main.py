@@ -131,7 +131,7 @@ if __name__ == "__main__":
         if do_upload:
             logging.info("Uploading to sharepoint...")
             sharepoint = SharepointConnector(sharepoint_tenant, sharepoint_client_id, sharepoint_client_secret)
-            sharepoint.upload_delta(sharepoint_drive_id, file_name, folder_name=sharepoint_folder)
+            sharepoint.upload(sharepoint_drive_id, file_name, folder_name=sharepoint_folder)
             logging.info("Upload done")
 
         logging.info("All done!")
