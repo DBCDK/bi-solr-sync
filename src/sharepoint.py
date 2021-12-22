@@ -86,7 +86,7 @@ class SharepointConnector:
             'Authorization': 'Bearer ' + self.token
         }
 
-        response = requests.post(url, headers=headers)
+        response = requests.post(url, headers=headers, proxies=self.proxy)
 
         if response.status_code != 200:
             raise Exception(
@@ -144,7 +144,7 @@ class SharepointConnector:
         logging.info('Content-Length: %s - Uploading bytes %s-%s/%s' % (
             segment_size, offset, offset + segment_size - 1, total_size))
 
-        response = requests.put(upload_url, data=data_segment, headers=headers)
+        response = requests.put(upload_url, data=data_segment, headers=headers, proxies=self.proxy)
 
         # While uploading the segments 202 is returned. But the status code of the last segment can be both 200 and 201
         if response.status_code not in [200, 201, 202]:
