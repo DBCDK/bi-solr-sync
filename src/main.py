@@ -32,7 +32,7 @@ def generate_query(since=None):
     q = '(marc.001b:870970 OR marc.001b:870971)'
 
     if since is not None:
-        q += ' AND marc.001d:[%s TO NOW]' % since
+        q += ' AND marc.001c:[%s TO NOW]' % since
 
     return q
 
