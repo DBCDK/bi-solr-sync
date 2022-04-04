@@ -1,5 +1,5 @@
 #!groovy
-node('devel10') {
+node('devel11') {
     def app
     checkout scm
 
@@ -9,7 +9,7 @@ node('devel10') {
     }
 
     stage('push') {
-        docker.withRegistry('https://docker-io.dbc.dk', 'docker') {
+        docker.withRegistry('https://docker-metascrum.artifacts.dbccloud.dk', 'docker') {
             app.push()
             app.push('latest')
         }
